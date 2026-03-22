@@ -100,7 +100,7 @@ class MainEMIPanel(wx.Panel):
         min_track_dist = float('inf')
         for t in self.tracks:
             dist = point_to_line_dist(click_x, click_y, t["x1"], t["y1"], t["x2"], t["y2"])
-            if dist < min_track_dist and dist < 2.5: 
+            if dist < min_track_dist: 
                 min_track_dist = dist
                 closest_track = t
 
@@ -109,43 +109,51 @@ class MainEMIPanel(wx.Panel):
         for prefix, comp_list in self.components.items():
             for c in comp_list:
                 dist = math.hypot(c["bbox_cx"] - click_x, c["bbox_cy"] - click_y)
-                if dist < min_comp_dist and dist < max(c["bbox_w"]/2, c["bbox_h"]/2, 2.5):
+                if dist < min_comp_dist:
                     min_comp_dist = dist
                     closest_comp = c
 
         board = pcbnew.GetBoard()
 
+        # Deselect all currently selected items in KiCad
         for fp in board.GetFootprints():
             fp.ClearSelected()
+            for pad in fp.Pads():
+                pad.ClearSelected()
         for t in board.GetTracks():
             t.ClearSelected()
 
         selected = False
 
-        if closest_track and min_track_dist < 0.8:
-            net_name = str(closest_track["net"])
-            for t in board.GetTracks():
-                if str(t.GetNetname()) == net_name:
-                    t.SetSelected()
-            selected = True
-            self.log_box.SetDefaultStyle(wx.TextAttr(wx.Colour(0, 200, 255)))
-            self.log_box.AppendText(f"\n[Cross-Probe] Highlighted full Net: '{net_name}' in KiCad.\n")
+        # Determine hit radius for component based on its bounding box
+        comp_hit_radius = max(closest_comp["bbox_w"]/2, closest_comp["bbox_h"]/2, 2.0) if closest_comp else 0
 
-        elif closest_comp and min_comp_dist < max(closest_comp["bbox_w"]/2, closest_comp["bbox_h"]/2):
+        # Logic: If we clicked closer to a component center than a track, select the component
+        if closest_comp and min_comp_dist < comp_hit_radius and min_comp_dist <= min_track_dist:
             if "obj" in closest_comp and closest_comp["obj"]:
                 closest_comp["obj"].SetSelected()
                 selected = True
                 self.log_box.SetDefaultStyle(wx.TextAttr(wx.Colour(0, 200, 255)))
                 self.log_box.AppendText(f"\n[Cross-Probe] Highlighted Component: {closest_comp['ref']} in KiCad.\n")
 
-        elif closest_track:
+        # Logic: Otherwise, if we clicked near a track (within 2.0mm tolerance), select the whole net
+        elif closest_track and min_track_dist < 2.0:
             net_name = str(closest_track["net"])
-            for t in board.GetTracks():
-                if str(t.GetNetname()) == net_name:
-                    t.SetSelected()
-            selected = True
-            self.log_box.SetDefaultStyle(wx.TextAttr(wx.Colour(0, 200, 255)))
-            self.log_box.AppendText(f"\n[Cross-Probe] Highlighted full Net: '{net_name}' in KiCad.\n")
+            if net_name:
+                # Select all tracks on the net
+                for t in board.GetTracks():
+                    if str(t.GetNetname()) == net_name:
+                        t.SetSelected()
+                
+                # Select all pads on the net to make the signal path obvious
+                for fp in board.GetFootprints():
+                    for pad in fp.Pads():
+                        if str(pad.GetNetname()) == net_name:
+                            pad.SetSelected()
+
+                selected = True
+                self.log_box.SetDefaultStyle(wx.TextAttr(wx.Colour(0, 200, 255)))
+                self.log_box.AppendText(f"\n[Cross-Probe] Highlighted full Net: '{net_name}' in KiCad.\n")
 
         if selected:
             pcbnew.Refresh()
