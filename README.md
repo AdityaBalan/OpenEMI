@@ -4,7 +4,7 @@ OpenEMI is an open-source Python-based KiCad Action Plugin that embeds physics-i
 
 By providing immediate, actionable EMI feedback during layout iteration, OpenEMI lowers the barrier to EMC-aware PCB design.
 
-## 🚀 Key Features
+## Key Features
 
 * **Spatial EMI Risk Heatmap:** Synthesizes a spatially resolved EMI risk heatmap using Gaussian-smoothed grid accumulation. 
 * **Live Layout Analysis:** Evaluates signal edge rates, current loop areas, return path continuity, crosstalk coupling, and via-induced discontinuities directly from the board geometry.
@@ -14,7 +14,7 @@ By providing immediate, actionable EMI feedback during layout iteration, OpenEMI
 * **Actionable Diagnostics:** Provides a color-coded textual diagnostic panel with specific remediation actions for each detected violation.
 * **Rapid Execution:** The full analysis pipeline executes in under five seconds for a board of moderate complexity, enabling continuous use during the layout phase.
 
-## 🛠️ Installation
+## Installation
 
 OpenEMI relies exclusively on system-installed Python packages and executes within KiCad's embedded Python interpreter.
 
